@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -1007,6 +1007,25 @@ input[type="hidden"] {
 }
 
 @media (max-width: 600px) {
+  /* Keep alert/confirm dialogs compact on very small screens (override global fullscreen modal rules) */
+  #alertModal.modal.active {
+    align-items: center !important;
+    justify-content: center !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  #alertModal .modal-content {
+    width: calc(100% - 48px) !important;
+    max-width: 420px !important;
+    margin: auto !important;
+    height: auto !important;
+    max-height: calc(100vh - 120px) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
   .modal-content {
     width: 100%;
     height: 100%;
@@ -3631,27 +3650,42 @@ function applyRoleBasedSections() {
 function hideActionButtonsForSpieler() {
   if (currentUserRole !== "spieler") return;
 
+  // Quick-hide common action buttons by selector (covers desktop + mobile variants)
+  const hideSelectors = [
+    '#btnAddStrafe',
+    '.bezahlt-btn',
+    '.btn-payment',
+    '.edit',
+    '.delete',
+    '.btn-danger',
+    '.btn-payment',
+    '[data-action="payment"]'
+  ];
+  hideSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      try { el.style.display = 'none'; } catch(e){}
+    });
+  });
+
+  // Fallback: scan all buttons for text/title/onclick hints and hide them
   document.querySelectorAll("button").forEach(btn => {
     const text = (btn.textContent || '').trim();
     const onclick = btn.getAttribute("onclick") || "";
     const title = (btn.getAttribute("title") || '').toLowerCase();
     const classes = (btn.className || '').toLowerCase();
 
-    // Buttons that open forms/modals
     if (text.includes("Strafe erfassen") || onclick.includes("openStrafeForm") ||
         text.includes("Guthaben/Vorauszahlung erfassen") || text.includes("Guthaben Erfassen") || onclick.includes("openGutschriftModal")) {
       btn.style.display = 'none';
       return;
     }
 
-    // Buttons by title (Zahlung erfassen/bearbeiten, Bearbeiten, Löschen)
     if (title.includes('zahlung') || title.includes('bearbeiten') || title.includes('löschen')) {
       btn.style.display = 'none';
       return;
     }
 
-    // Buttons by known classes (edit/delete/payment)
-    if (classes.includes('edit') || classes.includes('delete') || classes.includes('bezahlt-btn')) {
+    if (classes.includes('edit') || classes.includes('delete') || classes.includes('bezahlt-btn') || classes.includes('btn-payment')) {
       btn.style.display = 'none';
       return;
     }
@@ -4967,6 +5001,7 @@ function renderStrafeList() {
   strafenListe.innerHTML = "";
   displayData.forEach(s => {
     const canPay = ['admin','trainer','betreuer'].includes(currentUserRole);
+    const canEdit = ['admin','trainer','betreuer'].includes(currentUserRole);
     const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}).split('/').reverse().join('.');
     const notizIcon = s.notizen && s.notizen.trim() ? `<div class="tooltip-container" onclick="event.stopPropagation()"><span class="note-icon" title="Notiz vorhanden">💬</span><span class="tooltip-text">${s.notizen}</span></div>` : '';
 
@@ -4994,8 +5029,8 @@ function renderStrafeList() {
         <td class="notes-sperre-column">${notizIcon} ${sperrIcon}</td>
         <td class="actions actions-column">
           ${canPay ? `<button class="bezahlt-btn" onclick="openZahlungModal('${s.id}')" title="${s.bezahlt ? 'Zahlung bearbeiten' : 'Zahlung erfassen'}">${s.bezahlt ? '💰' : '💳'}</button>` : ''}
-          <button class="edit" onclick="editStrafe('${s.id}')" title="Bearbeiten">✏️</button>
-          <button class="delete" onclick="deleteStrafe('${s.id}')" title="Löschen">🗑</button>
+          ${canEdit ? `<button class="edit" onclick="editStrafe('${s.id}')" title="Bearbeiten">✏️</button>` : ''}
+          ${canEdit ? `<button class="delete" onclick="deleteStrafe('${s.id}')" title="Löschen">🗑</button>` : ''}
         </td>
       </tr>
     `;
@@ -5036,6 +5071,7 @@ function renderStrafenKarten(displayData) {
     const zaRegex = /zu[\W_]*sp(?:a|ae)t|zusp/i;
     const showMinuten = zaRegex.test(kNorm) || zaRegex.test(knNorm);
 
+    const canEdit = ['admin','trainer','betreuer'].includes(currentUserRole);
     const card = document.createElement('div');
     card.className = 'strafen-karte';
     card.innerHTML = `
@@ -5057,9 +5093,9 @@ function renderStrafenKarten(displayData) {
         <div style="font-size:12px; color:#666;">${notizIcon ? 'Notiz vorhanden' : ''} ${sperrIcon ? '| Gesperrt' : ''}</div>
       </div>
       <div class="strafe-aktionen">
-          ${['admin','trainer','betreuer'].includes(currentUserRole) ? `<button class="bezahlt-btn btn btn-primary btn-small btn-payment" onclick="openZahlungModal('${s.id}')" title="${s.bezahlt ? 'Zahlung bearbeiten' : 'Zahlung erfassen'}">${s.bezahlt ? '<i class="fas fa-wallet"></i> Zahlung bearbeiten' : '<i class="fas fa-credit-card"></i> Zahlen'}</button>` : ''}
-        <button class="edit btn btn-small" onclick="editStrafe('${s.id}')" title="Strafe bearbeiten"><i class="fas fa-pen"></i> Strafe bearbeiten</button>
-        <button class="delete btn btn-danger btn-small" onclick="deleteStrafe('${s.id}')" title="Löschen"><i class="fas fa-trash"></i> Löschen</button>
+          ${canEdit ? (['admin','trainer','betreuer'].includes(currentUserRole) ? `<button class="bezahlt-btn btn btn-primary btn-small btn-payment" onclick="openZahlungModal('${s.id}')" title="${s.bezahlt ? 'Zahlung bearbeiten' : 'Zahlung erfassen'}">${s.bezahlt ? '<i class="fas fa-wallet"></i> Zahlung bearbeiten' : '<i class="fas fa-credit-card"></i> Zahlen'}</button>` : '') : ''}
+          ${canEdit ? `<button class="edit btn btn-small" onclick="editStrafe('${s.id}')" title="Strafe bearbeiten"><i class="fas fa-pen"></i> Strafe bearbeiten</button>` : ''}
+          ${canEdit ? `<button class="delete btn btn-danger btn-small" onclick="deleteStrafe('${s.id}')" title="Löschen"><i class="fas fa-trash"></i> Löschen</button>` : ''}
       </div>
     `;
 
