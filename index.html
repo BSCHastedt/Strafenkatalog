@@ -7466,6 +7466,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 </style>
 
+<style>
+@media (max-width: 768px) {
+  /* Ensure Guthaben page is scrollable and cards are not hidden under bottom nav */
+  #guthaben {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 16px));
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Give the cards container extra bottom space so last card isn't covered */
+  #guthabenKartenContainer {
+    margin-bottom: calc(84px + env(safe-area-inset-bottom, 16px));
+    box-sizing: border-box;
+  }
+  /* If transactions are shown as cards on mobile, ensure they have bottom spacing */
+  #allTransactionsCardsContainer, .transaction-card {
+    margin-bottom: 8px;
+  }
+  /* Make sure the section can scroll normally on small screens */
+  main, .section { overflow-y: auto; }
+}
+</style>
+
 <!-- Bottom navigation (mobile only) -->
 <div id="bottomNav" class="mobile-only" aria-hidden="false">
   <button id="bn-home" onclick="(function(){ moreMode=false; show('dashboard'); })()"><i class="fas fa-home bn-icon"></i><span class="bn-label">Home</span></button>
