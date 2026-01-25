@@ -2586,15 +2586,23 @@ input[type="hidden"] {
   }
 
   .strafe-betrag { 
-    text-align:center; 
-    font-size:24px; 
-    font-weight:800; 
-    color:var(--blue); 
-    margin:12px 0 16px 0; 
-    padding: 12px;
+    text-align:center;
+    font-size:18px;
+    font-weight:700;
+    color:var(--blue);
+    margin:8px 0 12px 0;
+    padding: 8px;
     background: linear-gradient(135deg, #f5f7fa 0%, #e3f2fd 100%);
     border-radius: 8px;
     border: 1px solid rgba(0, 61, 130, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    .strafe-betrag {
+      font-size:16px;
+      padding:6px;
+      margin:6px 0 10px 0;
+    }
   }
 
   .strafe-icons {
@@ -3710,6 +3718,23 @@ function applyRoleBasedActionButtons() {
       if (el) el.style.display = isStaff ? '' : 'none';
     });
   } catch (e) { console.warn('applyRoleBasedActionButtons: KPI hide failed', e); }
+  // Guthaben search: hide input and clear button for plain players
+  try {
+    const searchEl = document.getElementById('guthabenSearch');
+    const searchContainer = document.getElementById('guthabenSearchContainer');
+    const hideSearch = currentUserRole === 'spieler';
+    if (searchEl) searchEl.style.display = hideSearch ? 'none' : '';
+    // if there is a wrapper container we also hide it
+    if (searchContainer) searchContainer.style.display = hideSearch ? 'none' : '';
+    // try to hide the clear button (likely next sibling)
+    if (searchEl && searchEl.nextElementSibling && searchEl.nextElementSibling.tagName === 'BUTTON') {
+      searchEl.nextElementSibling.style.display = hideSearch ? 'none' : '';
+    } else {
+      // fallback: find any button in the guthaben section with onclick resetGuthabenFilter
+      const clearBtn = document.querySelector('#guthaben button[onclick="resetGuthabenFilter()"]');
+      if (clearBtn) clearBtn.style.display = hideSearch ? 'none' : '';
+    }
+  } catch (e) { console.warn('applyRoleBasedActionButtons: hide guthaben search failed', e); }
 }
 
 /* ===== Navigation ===== */
