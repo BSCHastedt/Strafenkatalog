@@ -2907,7 +2907,7 @@ input[type="hidden"] {
         <img src="https://kglszxqlspnqkjokqqly.supabase.co/storage/v1/object/public/Betreuer/Sanduhr.png" alt="Noch Offen" style="width: 90px; height: 90px; object-fit: contain; z-index: 1;">
       </div>
     </div>
-    <div class="kpi-card members" onclick="filterMitgliedByType('spieler')">
+    <div id="kpiMembersCard" class="kpi-card members" onclick="filterMitgliedByType('spieler')">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Spieler</div>
@@ -2916,7 +2916,7 @@ input[type="hidden"] {
         <img src="https://kglszxqlspnqkjokqqly.supabase.co/storage/v1/object/public/Betreuer/Spieler.png" alt="Spieler" style="width: 90px; height: 90px; object-fit: contain; z-index: 1;">
       </div>
     </div>
-    <div class="kpi-card trainer" onclick="filterMitgliedByType('trainer')">
+    <div id="kpiTrainerCard" class="kpi-card trainer" onclick="filterMitgliedByType('trainer')">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Trainer</div>
@@ -2925,7 +2925,7 @@ input[type="hidden"] {
          <img src=https://kglszxqlspnqkjokqqly.supabase.co/storage/v1/object/public/Betreuer/Trainer.png alt="Betreuer" style="width: 90px; height: 90px; object-fit: contain; z-index: 1;">
       </div>
     </div>
-    <div class="kpi-card betreuer" onclick="filterMitgliedByType('betreuer')">
+    <div id="kpiBetreuerCard" class="kpi-card betreuer" onclick="filterMitgliedByType('betreuer')">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Betreuer</div>
@@ -2936,7 +2936,7 @@ input[type="hidden"] {
     </div>
     
     <!-- Rankings converted to KPI-style cards -->
-    <div class="kpi-card chart-card">
+    <div id="kpiTopMostCard" class="kpi-card chart-card">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Top 5 - Meiste Strafen</div>
@@ -2945,7 +2945,7 @@ input[type="hidden"] {
       <div class="bar-chart" id="topMostChart" style="flex:1; min-height:120px;"></div>
     </div>
 
-    <div class="kpi-card chart-card">
+    <div id="kpiTopLeastCard" class="kpi-card chart-card">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Top 5 - Wenigste Strafen</div>
@@ -3702,6 +3702,14 @@ function applyRoleBasedActionButtons() {
   // Hide success-modal payment button for non-staff
   const btnSuccessPay = document.getElementById('btnStrafeSuccessZahlung');
   if (btnSuccessPay) btnSuccessPay.style.display = isStaff ? '' : 'none';
+  // Hide dashboard KPI cards for non-staff (e.g., role 'spieler')
+  try {
+    const kpiIds = ['kpiMembersCard','kpiTrainerCard','kpiBetreuerCard','kpiTopMostCard','kpiTopLeastCard'];
+    kpiIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = isStaff ? '' : 'none';
+    });
+  } catch (e) { console.warn('applyRoleBasedActionButtons: KPI hide failed', e); }
 }
 
 /* ===== Navigation ===== */
