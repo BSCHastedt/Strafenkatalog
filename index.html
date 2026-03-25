@@ -412,6 +412,12 @@ th:hover {
 .actions .delete { color: var(--red); font-size: 20px; }
 .actions .bezahlt-btn { color: #27ae60; font-weight: bold; font-size: 18px; }
 .actions .bezahlt-btn:hover { transform: scale(1.2); }
+.actions .btn-paypal-spieler { background: #0070ba !important; color: #fff !important; padding: 6px 12px !important; font-size: 13px !important; font-weight: 600 !important; border-radius: 6px !important; height: auto !important; }
+.actions .btn-paypal-spieler:hover { background: #005ea6 !important; transform: none !important; }
+#paypalVzModal .modal-content { overflow-y: auto !important; }
+#paypalVzModal .modal-buttons { padding-bottom: max(24px, calc(16px + env(safe-area-inset-bottom, 0px))) !important; background: #fff !important; border-top: 1px solid #eee !important; }
+#paypalVzModal #paypalVzCopyBtn { background: #0070ba !important; color: #fff !important; }
+#paypalVzModal #paypalVzCopyBtn:hover { background: #005ea6 !important; }
 
 /* Notizen/Sperre Spalte schmaler */
 .notes-sperre-column {
@@ -2800,6 +2806,10 @@ input[type="hidden"] {
 .strafen-karte .btn-outline { background: #fff; color: var(--blue); border: 1px solid rgba(0,0,0,0.08); }
 .strafen-karte .btn-danger { background: #fff; color: var(--red); border: 1px solid rgba(198,40,40,0.12); }
 .strafen-karte .btn-small { padding: 8px 10px; font-size: 14px; border-radius: 8px; }
+.btn-paypal-spieler { background: #0070ba; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s, transform 0.1s; }
+.btn-paypal-spieler:hover { background: #005ea6; }
+.btn-paypal-spieler:active { transform: translateY(1px); }
+.strafen-karte .btn-paypal-spieler { width: 100%; justify-content: center; padding: 12px; font-size: 15px; border-radius: 10px; }
 .strafen-karte .bezahlt-btn { box-shadow: none; }
 </style>
 </head>
@@ -2885,10 +2895,11 @@ input[type="hidden"] {
 <!-- ===== DASHBOARD ===== -->
 <div id="dashboard" class="section">
   <h2>Dashboard</h2>
+  <div id="dashboardWelcome" style="margin: -8px 0 20px 0; font-size: 15px; color: #555;"></div>
   
   <!-- KPI Cards -->
   <div class="kpi-grid">
-    <div class="kpi-card total">
+    <div class="kpi-card total" onclick="showStrafenMitFilter('')" style="cursor:pointer;">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Strafen Gesamt</div>
@@ -2897,7 +2908,7 @@ input[type="hidden"] {
         <img src="https://kglszxqlspnqkjokqqly.supabase.co/storage/v1/object/public/Betreuer/strafen.png" alt="Strafen" style="width: 90px; height: 90px; object-fit: contain; z-index: 1;">
       </div>
     </div>
-    <div class="kpi-card paid">
+    <div class="kpi-card paid" onclick="showStrafenMitFilter('status:bezahlt')" style="cursor:pointer;">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Bezahlt</div>
@@ -2906,7 +2917,7 @@ input[type="hidden"] {
         <img src="https://kglszxqlspnqkjokqqly.supabase.co/storage/v1/object/public/Betreuer/geld.png" alt="Bezahlt" style="width: 90px; height: 90px; object-fit: contain; z-index: 1;">
       </div>
     </div>
-    <div class="kpi-card open">
+    <div class="kpi-card open" onclick="showStrafenMitFilter('status:offen')" style="cursor:pointer;">
       <div class="kpi-header">
         <div>
           <div class="kpi-label">Noch Offen</div>
@@ -3001,6 +3012,28 @@ input[type="hidden"] {
     </thead>
     <tbody id="liste"></tbody>
   </table>
+
+  <!-- Ehemalige Mitglieder (aufklappbar) -->
+  <div style="margin-top: 36px;">
+    <h3 onclick="toggleEhemalige()" style="cursor:pointer; user-select:none; display:flex; align-items:center; gap:10px;">
+      <span>👋 Ehemalige Mitglieder</span>
+      <span id="ehemaligeToggleIcon" style="font-size:15px; transition: transform 0.3s ease; display:inline-block;">▼</span>
+    </h3>
+    <div id="ehemaligeContainer" style="display:none;">
+      <p style="color:#888; font-size:13px; margin-bottom:8px;">Archivierte Mitglieder – alle Strafen und Zahlungen bleiben in der Kasse erhalten.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Typ</th>
+            <th>Trikot</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="ehemaligeListe"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- ===== STRAFENKATALOG ===== -->
@@ -3586,6 +3619,7 @@ input[type="hidden"] {
     <!-- Buttons mit 3 Optionen -->
     <div class="modal-buttons" style="display: flex; flex-direction: column; gap: 12px; padding: 20px 30px 30px 30px;">
       <button id="btnStrafeSuccessZahlung" onclick="strafeSuccessZahlung()" style="width: 100%; padding: 14px 16px; background: linear-gradient(135deg, var(--blue) 0%, #2c5aa0 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s;">💳 Zahlung erfassen</button>
+      <button onclick="strafeWiederholen()" style="width: 100%; padding: 14px 16px; background: linear-gradient(135deg, #e65100 0%, #ff7043 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s;">🔁 Strafe wiederholen</button>
       <button onclick="strafeSuccessStrafenliste()" style="width: 100%; padding: 14px 16px; background: white; color: var(--blue); border: 2px solid var(--blue); border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; transition: background 0.2s, color 0.2s;">📋 Zur Strafen</button>
       <button onclick="closeStrafeSuccessModal()" style="width: 100%; padding: 14px 16px; background: transparent; color: #999; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 500; transition: all 0.2s;">Schließen</button>
     </div>
@@ -3594,7 +3628,24 @@ input[type="hidden"] {
 
 <!-- ===== ZAHLUNGSART MODAL ===== -->
 
-<!-- ===== ÜBERWEISUNG BAR ZU PAYPAL MODAL ===== -->
+<!-- ===== PAYPAL VERWENDUNGSZWECK MODAL ===== -->
+<div id="paypalVzModal" class="modal">
+  <div class="modal-content" style="max-width: 480px;">
+    <div class="modal-header" style="background: #0070ba; color: #fff; text-align: center; padding: 20px; position: relative;">
+      <button onclick="document.getElementById('paypalVzModal').classList.remove('active')" style="position: absolute; top: 12px; right: 14px; background: transparent; border: none; color: #fff; font-size: 22px; cursor: pointer; line-height: 1; opacity: 0.85;">✕</button>
+      <div style="font-size: 28px; margin-bottom: 6px;">🅿️ PayPal Zahlung</div>
+      <div style="font-size: 15px; font-weight: 500; opacity: 0.9;">Bitte Verwendungszweck kopieren</div>
+    </div>
+    <div class="modal-body" style="padding: 24px;">
+      <p style="color: #555; font-size: 14px; margin-bottom: 14px;">Kopiere den folgenden Text und füge ihn bei PayPal in das <strong>Nachrichtenfeld</strong> ein, damit deine Zahlung zugeordnet werden kann:</p>
+      <div id="paypalVzText" style="background: #f0f4ff; border: 2px dashed #0070ba; border-radius: 10px; padding: 14px 18px; font-size: 15px; font-weight: 600; color: #003d82; line-height: 1.5; user-select: all; cursor: text; word-break: break-word;"></div>
+      <button onclick="copyPaypalVz()" id="paypalVzCopyBtn" style="margin-top: 14px; width: 100%; padding: 12px; background: #0070ba; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s;">📋 Text kopieren &amp; PayPal öffnen</button>
+      <p style="color: #888; font-size: 12px; margin-top: 12px; margin-bottom: 0; text-align: center;">Nach dem kopieren des Textes wirst du automatisch zu PayPal weitergeleitet.</p>
+      <button onclick="document.getElementById('paypalVzModal').classList.remove('active')" style="margin-top: 12px; width: 100%; padding: 14px; background: #c62828; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">❌ Abbrechen</button>
+    </div>
+    <div class="modal-buttons" style="display: none;">
+  </div>
+</div>
 <div id="ueberweisungModal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
@@ -4179,6 +4230,13 @@ async function loadApp() {
   
   // Aktiviere Dashboard-Sektion über show() Funktion
   show('dashboard');
+
+  // Willkommensnachricht im Dashboard setzen
+  const welcomeEl = document.getElementById('dashboardWelcome');
+  if (welcomeEl && currentUser) {
+    const name = [currentUser.vorname, currentUser.nachname].filter(Boolean).join(' ');
+    welcomeEl.innerHTML = `👋 Willkommen, <strong>${name}</strong>`;
+  }
   
   // Lade Navigation mit Logout-Button
   updateNavigation();
@@ -4249,15 +4307,7 @@ async function populateProfileDropdown() {
     document.getElementById('profileMemberName').textContent = member ? `${member.vorname} ${member.nachname}`.trim() : (currentUser.vorname || '');
     document.getElementById('profileMemberEmail').textContent = user.email || '';
 
-    // Last login (user.last_sign_in_at) - format friendly
-    const last = user?.last_sign_in_at || user?.last_sign_in || null;
-    if (last) {
-      const d = new Date(last);
-      const formatted = d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      const lastEl = document.getElementById('profileMemberLastLogin');
-      if (lastEl) lastEl.innerHTML = `<strong>Zuletzt eingeloggt:</strong><br>${formatted}`;
-      // do NOT set header/profile button last-login (keep header clean)
-    }
+
 
     if (member && member.spielerfoto_path) {
       const { data } = sb.storage.from('Spielerfotos').getPublicUrl(member.spielerfoto_path);
@@ -4441,6 +4491,7 @@ async function ladeMitglieder() {
     .from("mitglieder")
     .select("*")
     .neq("typ", "admin")
+    .eq("aktiv", true)
     .order("nachname");
 
   if (error) {
@@ -4479,7 +4530,8 @@ async function speichern() {
   if (!editId.value) {
     const { data: existingMembers } = await sb
       .from("mitglieder")
-      .select("vorname, nachname");
+      .select("vorname, nachname")
+      .eq("aktiv", true);
 
     const isDuplicate = existingMembers?.some(m => 
       m.vorname.toLowerCase() === vornameNormalized && 
@@ -4533,11 +4585,26 @@ async function bearbeiten(id) {
 
 async function loeschen(id) {
   showConfirm(
-    "Mitglied wirklich löschen?",
-    "Mitglied löschen",
+    "Mitglied wirklich archivieren? Alle bisherigen Strafen und Zahlungen bleiben erhalten und die Kasse wird nicht verändert.",
+    "Mitglied archivieren",
     async () => {
-      await sb.from("mitglieder").delete().eq("id", id);
-      ladeMitglieder();
+      await sb.from("mitglieder").update({ aktiv: false }).eq("id", id);
+      await ladeMitglieder();
+      await ladeEhemaligeMitglieder();
+      showToast("Mitglied archiviert – Kasse bleibt unverändert", "success");
+    }
+  );
+}
+
+async function reaktivieren(id) {
+  showConfirm(
+    "Mitglied reaktivieren und wieder zur aktiven Mannschaft hinzufügen?",
+    "Mitglied reaktivieren",
+    async () => {
+      await sb.from("mitglieder").update({ aktiv: true }).eq("id", id);
+      await ladeMitglieder();
+      await ladeEhemaligeMitglieder();
+      showToast("Mitglied reaktiviert", "success");
     }
   );
 }
@@ -4553,6 +4620,63 @@ function openMitgliedModal() {
 
 function closeMitgliedModal() {
   document.getElementById("mitgliedModal").classList.remove("active");
+}
+
+/* ===== EHEMALIGE MITGLIEDER ===== */
+let ehemaligeMitgliederData = [];
+
+async function ladeEhemaligeMitglieder() {
+  const { data, error } = await sb
+    .from("mitglieder")
+    .select("*")
+    .neq("typ", "admin")
+    .eq("aktiv", false)
+    .order("nachname");
+
+  if (error) {
+    console.error("Fehler beim Laden ehemaliger Mitglieder:", error);
+    return;
+  }
+
+  ehemaligeMitgliederData = (data || []).filter(m => !(m.vorname === "Admin" && m.nachname === "Admin"));
+  renderEhemaligeListe();
+}
+
+function renderEhemaligeListe() {
+  const liste = document.getElementById("ehemaligeListe");
+  if (!liste) return;
+  liste.innerHTML = "";
+
+  if (ehemaligeMitgliederData.length === 0) {
+    liste.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888; padding:16px;">Keine ehemaligen Mitglieder vorhanden</td></tr>';
+    return;
+  }
+
+  ehemaligeMitgliederData.forEach(m => {
+    const typIcon = m.typ === 'spieler' ? 'fa-futbol' : m.typ === 'trainer' ? 'fa-person-chalkboard' : 'fa-people-group';
+    const typLabel = m.typ.charAt(0).toUpperCase() + m.typ.slice(1);
+    liste.innerHTML += `
+      <tr style="opacity:0.65;">
+        <td>${m.vorname} ${m.nachname}</td>
+        <td><i class="fa-solid ${typIcon}" style="color:#ffc107;margin-right:8px;width:20px;text-align:center;"></i>${typLabel}</td>
+        <td>${m.trikotnummer ?? "-"}</td>
+        <td class="actions">
+          <button class="edit" onclick="reaktivieren('${m.id}')" title="Reaktivieren" style="font-size:16px;">♻️</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function toggleEhemalige() {
+  const container = document.getElementById("ehemaligeContainer");
+  const icon = document.getElementById("ehemaligeToggleIcon");
+  const isVisible = container.style.display !== "none";
+  container.style.display = isVisible ? "none" : "block";
+  icon.style.transform = isVisible ? "rotate(0deg)" : "rotate(180deg)";
+  if (!isVisible) {
+    ladeEhemaligeMitglieder();
+  }
 }
 
 /* ===== STRAFENKATALOG ===== */
@@ -4874,6 +4998,55 @@ function closeRegelModal() {
 
 /* ===== STRAFEN ===== */
 let strafeData = [];
+const PAYPAL_ME = 'https://paypal.me/ramazanbscmk';
+let _paypalCurrentUrl = '';
+
+function openPayPalLink(betrag, spielerName, grund, datum) {
+  const amountStr = Number(betrag).toFixed(2);
+  _paypalCurrentUrl = `${PAYPAL_ME}/${amountStr}`;
+
+  // Verwendungszweck zusammenbauen
+  const datumFormatted = datum
+    ? new Date(datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '';
+  const vz = `Strafe BSC Hastedt | ${spielerName} | ${grund} | ${datumFormatted} | ${Number(betrag).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+
+  document.getElementById('paypalVzText').textContent = vz;
+  document.getElementById('paypalVzCopyBtn').textContent = '📋 Text kopieren';
+  document.getElementById('paypalVzCopyBtn').style.background = '#f0f4ff';
+  document.getElementById('paypalVzCopyBtn').style.color = '#0070ba';
+  document.getElementById('paypalVzModal').classList.add('active');
+}
+
+function copyPaypalVz() {
+  const text = document.getElementById('paypalVzText').textContent;
+  const btn = document.getElementById('paypalVzCopyBtn');
+
+  const openPayPal = () => {
+    btn.textContent = '✅ Kopiert! PayPal wird geöffnet...';
+    btn.style.background = '#27ae60';
+    document.getElementById('paypalVzModal').classList.remove('active');
+    window.open(_paypalCurrentUrl, '_blank');
+  };
+
+  navigator.clipboard.writeText(text).then(openPayPal).catch(() => {
+    // Fallback für ältere Browser
+    try {
+      const el = document.getElementById('paypalVzText');
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.execCommand('copy');
+    } catch(e) {}
+    openPayPal();
+  });
+}
+
+function proceedToPayPal() {
+  document.getElementById('paypalVzModal').classList.remove('active');
+  window.open(_paypalCurrentUrl, '_blank');
+}
 let strafeSortConfig = { column: 'datum', direction: 'desc' };
 
 async function ladeStrafen() {
@@ -5062,6 +5235,7 @@ function renderStrafeList() {
         <td class="notes-sperre-column">${notizIcon} ${sperrIcon}</td>
         <td class="actions actions-column">
           ${canPay ? `<button class="bezahlt-btn" onclick="openZahlungModal('${s.id}')" title="${s.bezahlt ? 'Zahlung bearbeiten' : 'Zahlung erfassen'}">${s.bezahlt ? '💰' : '💳'}</button>` : ''}
+          ${currentUserRole === 'spieler' && !s.bezahlt ? `<button class="btn-paypal-spieler" onclick="openPayPalLink(${Number(s.betrag)}, '${(s.mitglieder.vorname + ' ' + s.mitglieder.nachname).replace(/'/g, '\\&apos;')}', '${(s.strafenkatalog.name).replace(/'/g, '\\&apos;')}', '${s.datum}')" title="Per PayPal bezahlen"><i class="fab fa-paypal"></i> PayPal</button>` : ''}
           ${canEdit ? `<button class="edit" onclick="editStrafe('${s.id}')" title="Bearbeiten">✏️</button>` : ''}
           ${canEdit ? `<button class="delete" onclick="deleteStrafe('${s.id}')" title="Löschen">🗑</button>` : ''}
         </td>
@@ -5127,6 +5301,7 @@ function renderStrafenKarten(displayData) {
       </div>
       <div class="strafe-aktionen">
           ${canEdit ? (['admin','trainer','betreuer'].includes(currentUserRole) ? `<button class="bezahlt-btn btn btn-primary btn-small btn-payment" onclick="openZahlungModal('${s.id}')" title="${s.bezahlt ? 'Zahlung bearbeiten' : 'Zahlung erfassen'}">${s.bezahlt ? '<i class="fas fa-wallet"></i> Zahlung bearbeiten' : '<i class="fas fa-credit-card"></i> Zahlen'}</button>` : '') : ''}
+          ${currentUserRole === 'spieler' && !s.bezahlt ? `<button class="btn-paypal-spieler" onclick="openPayPalLink(${Number(s.betrag)}, '${(s.mitglieder.vorname + ' ' + s.mitglieder.nachname).replace(/'/g, '\\&apos;')}', '${(s.strafenkatalog.name).replace(/'/g, '\\&apos;')}', '${s.datum}')"><i class="fab fa-paypal"></i> Per PayPal bezahlen (${(Number(s.betrag)).toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €)</button>` : ''}
           ${canEdit ? `<button class="edit btn btn-small" onclick="editStrafe('${s.id}')" title="Strafe bearbeiten"><i class="fas fa-pen"></i> Strafe bearbeiten</button>` : ''}
           ${canEdit ? `<button class="delete btn btn-danger btn-small" onclick="deleteStrafe('${s.id}')" title="Löschen"><i class="fas fa-trash"></i> Löschen</button>` : ''}
       </div>
@@ -5461,11 +5636,12 @@ function closeStrafeModal() {
 let strafenkatalogCache = [];
 
 async function initStrafeForm() {
-  // Lade Spieler für Mitglied-Select
+  // Lade Spieler für Mitglied-Select (nur aktive)
   const { data: mitglieder } = await sb
     .from("mitglieder")
     .select("*")
     .eq("typ", "spieler")
+    .eq("aktiv", true)
     .order("vorname", { ascending: true });
 
   const filteredMitglieder = mitglieder || [];
@@ -5719,6 +5895,16 @@ async function saveStrafe() {
     return;
   }
 
+  // Letzte Strafe-Daten für "Wiederholen" sichern (BEVOR closeStrafeModal() alles zurücksetzt)
+  window.lastStrafeData = {
+    kategorie: strafeKategorie.value,
+    katalog_id: strafeGrund.value,
+    datum: strafeDatum.value,
+    minuten: strafeMinuten.value,
+    sperre: strafeSperre.checked,
+    notizen: strafeNotizen.value
+  };
+
   // Speichere Strafe ID für späteren Gebrauch
   closeStrafeModal();
   loadDashboard();
@@ -5934,6 +6120,52 @@ function closeStrafeSuccessModal() {
   document.getElementById("strafeSuccessModal").classList.remove("active");
 }
 
+function showStrafenMitFilter(filter) {
+  show("strafen");
+  const filterSelect = document.getElementById("strafeFilter");
+  if (filterSelect) {
+    filterSelect.value = filter;
+    filterStrafen();
+  }
+}
+
+function strafeWiederholen() {
+  // Success-Modal schließen
+  document.getElementById("strafeSuccessModal").classList.remove("active");
+
+  const d = window.lastStrafeData;
+  if (!d) {
+    // Fallback: leeres Formular öffnen
+    openStrafeForm();
+    return;
+  }
+
+  // editStrafeId leer lassen → neue Strafe
+  editStrafeId.value = "";
+
+  // Kategorie setzen und Grund-Dropdown befüllen
+  strafeKategorie.value = d.kategorie;
+  updateStrafeGrundDropdown();
+
+  // Alle Felder vorausfüllen – Spieler bleibt leer
+  strafeGrund.value = d.katalog_id;
+  strafeDatum.value = d.datum;
+  strafeMinuten.value = d.minuten;
+  strafeSperre.checked = d.sperre;
+  strafeNotizen.value = d.notizen || "";
+  strafeMitglied.value = ""; // Spieler MUSS neu gewählt werden
+
+  // Betrag neu berechnen und Modal öffnen
+  berechneBetrag();
+  document.getElementById("strafeModal").classList.add("active");
+
+  // Spieler-Feld fokussieren damit der Nutzer direkt auswählen kann
+  setTimeout(() => {
+    const spielerSelect = document.getElementById("strafeMitglied");
+    if (spielerSelect) spielerSelect.focus();
+  }, 100);
+}
+
 function updateZahlungVerbleibend() {
   const betrag1 = Number(document.getElementById("zahlungsbetrag1").value) || 0;
   const betrag2 = Number(document.getElementById("zahlungsbetrag2").value) || 0;
@@ -6099,11 +6331,12 @@ async function loadDashboard() {
     return;
   }
 
-  // Lade alle Mitglieder (für Gesamtzahl und Typen)
+  // Lade alle aktiven Mitglieder (für Gesamtzahl und Typen)
   const { data: members, error: memberError } = await sb
     .from("mitglieder")
     .select("id, typ, vorname, nachname")
-    .neq("typ", "admin");
+    .neq("typ", "admin")
+    .eq("aktiv", true);
 
   if (memberError) {
     console.error(memberError);
@@ -6249,11 +6482,12 @@ function filterMitgliedByType(type) {
 }
 
 async function initGutschriftModal() {
-  // Lade nur Spieler, sortiert von A-Z nach Vorname
+  // Lade nur aktive Spieler, sortiert von A-Z nach Vorname
   const { data: mitglieder } = await sb
     .from("mitglieder")
     .select("id, vorname, nachname")
     .eq("typ", "spieler")
+    .eq("aktiv", true)
     .order("vorname");
 
   const filteredMitglieder = mitglieder || [];
@@ -7178,7 +7412,7 @@ function renderMitgliederList() {
         <td>${m.trikotnummer ?? "-"}</td>
         <td class="actions">
           <button class="edit" onclick="bearbeiten('${m.id}')" title="Bearbeiten">✏️</button>
-          <button class="delete" onclick="loeschen('${m.id}')" title="Löschen">🗑</button>
+          <button class="delete" onclick="loeschen('${m.id}')" title="Archivieren">📦</button>
         </td>
       </tr>
     `;
